@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — ArcadeOS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="bi bi-controller"></i></div>
+        <div class="brand-text">
+            <span class="brand-name">ArcadeOS</span>
+            <span class="brand-sub">Machine Control</span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a th:href="@{/}" class="nav-item active"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+        <a th:href="@{/machines}" class="nav-item"><i class="bi bi-hdd-rack"></i><span>Machines</span></a>
+        <a th:href="@{/analytics}" class="nav-item"><i class="bi bi-bar-chart-line"></i><span>Analytics</span></a>
+        <a th:href="@{/h2-console}" target="_blank" class="nav-item"><i class="bi bi-database"></i><span>Database</span></a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="system-status">
+            <div class="status-dot online"></div>
+            <span>System Online</span>
+        </div>
+    </div>
+</div>
+
+<div class="main-wrapper" id="mainWrapper">
+    <header class="topbar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <div class="topbar-title">Dashboard</div>
+        <div class="topbar-actions">
+            <div class="live-badge"><span class="pulse-dot"></span><span>LIVE</span></div>
+            <span class="topbar-time" id="topbarTime"></span>
+        </div>
+    </header>
+
+    <div th:if="${successMessage != null}"
+         class="alert alert-success alert-dismissible fade show mx-4 mt-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMessage != null}"
+         class="alert alert-danger alert-dismissible fade show mx-4 mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="content-inner">
+
+        <!-- ── Stat Cards ──────────────────────────────── -->
+        <div class="stats-grid">
+
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="bi bi-hdd-rack-fill"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statTotalMachines" th:text="${totalMachines}">0</div>
+                    <div class="stat-label">Total Machines</div>
+                </div>
+            </div>
+
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="bi bi-wifi"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statOnline" th:text="${onlineMachines}">0</div>
+                    <div class="stat-label">Online</div>
+                </div>
+            </div>
+
+            <div class="stat-card danger">
+                <div class="stat-icon"><i class="bi bi-wifi-off"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statOffline" th:text="${offlineMachines}">0</div>
+                    <div class="stat-label">Offline</div>
+                </div>
+            </div>
+
+            <div class="stat-card fault">
+                <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statFault" th:text="${faultMachines}">0</div>
+                    <div class="stat-label">Faults</div>
+                </div>
+            </div>
+
+            <div class="stat-card warning">
+                <div class="stat-icon"><i class="bi bi-calendar-day"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statDailyPlays" th:text="${dailyPlays}">0</div>
+                    <div class="stat-label">Today's Plays</div>
+                </div>
+            </div>
+
+            <div class="stat-card info">
+                <div class="stat-icon"><i class="bi bi-joystick"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" id="statPlays" th:text="${totalPlays}">0</div>
+                    <div class="stat-label">Total Plays</div>
+                </div>
+            </div>
+
+            <div class="stat-card gold">
+                <div class="stat-icon"><i class="bi bi-calendar2-check"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value">
+                        &#8377;<span id="statDailySales" th:text="${dailySales}">0.00</span>
+                    </div>
+                    <div class="stat-label">Today's Revenue</div>
+                </div>
+            </div>
+
+            <div class="stat-card green">
+                <div class="stat-icon"><i class="bi bi-currency-rupee"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value">
+                        &#8377;<span id="statSales" th:text="${totalSales}">0.00</span>
+                    </div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── Dashboard Grid ─────────────────────────── -->
+        <div class="dashboard-grid">
+
+            <!-- Machine Status Table -->
+            <div class="card-panel wide">
+                <div class="panel-header">
+                    <h3><i class="bi bi-hdd-rack me-2"></i>Machine Status</h3>
+                    <a th:href="@{/machines}" class="btn-link">
+                        Manage <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Machine</th>
+                            <th>ID</th>
+                            <th>Status</th>
+                            <th>Today Plays</th>
+                            <th>Total Plays</th>
+                            <th>Today Revenue</th>
+                            <th>Total Revenue</th>
+                            <th>Last Seen</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="m : ${machines}">
+                            <td>
+                                <div class="machine-name-cell">
+                                    <div class="machine-avatar"
+                                         th:classappend="${m.hasFault()} ? 'avatar-fault' : ''"
+                                         th:text="${m.name.substring(0,1)}">M</div>
+                                    <span th:text="${m.name}">Machine</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="mono-badge" th:text="${m.machineId}">ID</span>
+                            </td>
+                            <td>
+                                    <span class="status-badge"
+                                          th:classappend="${m.status == 'ONLINE'} ? 'online' :
+                                                          (${m.status == 'FAULT'} ? 'fault' : 'offline')"
+                                          th:text="${m.status}">OFFLINE</span>
+                            </td>
+                            <td class="num-cell" th:text="${m.dailyPlayCount}">0</td>
+                            <td class="num-cell" th:text="${m.playCount}">0</td>
+                            <td class="num-cell revenue"
+                                th:text="'&#8377;' + ${#numbers.formatDecimal(m.dailySales,1,2)}">0.00</td>
+                            <td class="num-cell revenue"
+                                th:text="'&#8377;' + ${#numbers.formatDecimal(m.totalSales,1,2)}">0.00</td>
+                            <td>
+                                    <span class="time-ago"
+                                          th:text="${m.lastSeen != null} ?
+                                          ${#temporals.format(m.lastSeen,'HH:mm:ss')} : 'Never'">
+                                        Never
+                                    </span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(machines)}">
+                            <td colspan="8" class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <p>No machines yet.
+                                    <a th:href="@{/machines}">Add one →</a>
+                                </p>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Revenue Chart -->
+            <div class="card-panel">
+                <div class="panel-header">
+                    <h3><i class="bi bi-bar-chart-fill me-2"></i>Revenue by Machine</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="card-panel">
+                <div class="panel-header">
+                    <h3><i class="bi bi-activity me-2"></i>Live Activity</h3>
+                </div>
+                <div class="activity-feed">
+                    <div th:each="event : ${recentEvents}" class="activity-item">
+                        <div class="activity-dot"
+                             th:classappend="${event.rfidTag == 'DASHBOARD_RESET'} ?
+                             'dot-reset' : ''"></div>
+                        <div class="activity-body">
+                            <span class="activity-machine"
+                                  th:text="${event.machineId}">ID</span>
+                            <span class="activity-count"
+                                  th:if="${event.count > 0}">
+                                +<span th:text="${event.count}">1</span> plays
+                            </span>
+                            <span th:if="${event.rfidTag == 'OFFLINE_SYNC'}"
+                                  class="offline-sync-tag">OFFLINE SYNC</span>
+                            <span th:if="${event.rfidTag == 'DASHBOARD_RESET'}"
+                                  class="reset-tag">RESET</span>
+                            <span th:if="${event.rfidTag != null
+                                          and event.rfidTag != 'OFFLINE_SYNC'
+                                          and event.rfidTag != 'DASHBOARD_RESET'}"
+                                  class="activity-rfid"
+                                  th:text="'[' + ${event.rfidTag} + ']'"></span>
+                        </div>
+                        <div class="activity-time"
+                             th:text="${#temporals.format(event.receivedAt,'HH:mm:ss')}">
+                            00:00
+                        </div>
+                    </div>
+                    <div th:if="${#lists.isEmpty(recentEvents)}" class="empty-feed">
+                        <i class="bi bi-reception-0"></i>
+                        <p>Waiting for data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hardware Fault Monitor -->
+            <div class="card-panel wide">
+                <div class="panel-header">
+                    <h3>
+                        <i class="bi bi-shield-exclamation me-2"></i>
+                        Hardware Fault Monitor
+                    </h3>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <span class="fault-summary-badge rfid">
+                            RFID Faults: <span th:text="${rfidFaults}">0</span>
+                        </span>
+                        <span class="fault-summary-badge relay">
+                            Relay Faults: <span th:text="${relayFaults}">0</span>
+                        </span>
+                        <span class="fault-summary-badge lcd">
+                            LCD Faults: <span th:text="${lcdFaults}">0</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Machine</th>
+                            <th>WiFi</th>
+                            <th>Signal</th>
+                            <th>RFID Module</th>
+                            <th>LCD Screen</th>
+                            <th>Relay</th>
+                            <th>Uptime</th>
+                            <th>Free Heap</th>
+                            <th>Last Fault</th>
+                            <th>Fault Detail</th>
+                            <th>Fault Time</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="m : ${machines}"
+                            th:classappend="${m.hasFault()} ? 'fault-row' : ''">
+                            <td>
+                                <div class="machine-name-cell">
+                                    <div class="machine-avatar"
+                                         th:classappend="${m.hasFault()} ? 'avatar-fault' : ''"
+                                         th:text="${m.name.substring(0,1)}">M</div>
+                                    <span th:text="${m.name}">Machine</span>
+                                </div>
+                            </td>
+                            <td>
+                                    <span class="status-badge"
+                                          th:classappend="${m.status == 'ONLINE'} ? 'online' :
+                                                          (${m.status == 'FAULT'} ? 'fault' : 'offline')"
+                                          th:text="${m.status}">OFFLINE</span>
+                            </td>
+                            <td>
+                                    <span th:if="${m.wifiRssi != null}"
+                                          class="signal-badge"
+                                          th:classappend="${m.wifiRssi >= -60} ? 'signal-good' :
+                                                          (${m.wifiRssi >= -70} ? 'signal-fair' :
+                                                          'signal-weak')"
+                                          th:text="${m.wifiRssi + ' dBm (' + m.wifiSignalStrength + ')'}">
+                                    </span>
+                                <span th:if="${m.wifiRssi == null}"
+                                      style="color:var(--text-muted)">—</span>
+                            </td>
+                            <td>
+                                    <span class="status-badge"
+                                          th:classappend="${m.rfidStatus == 'OK'} ? 'online' :
+                                                          (${m.rfidStatus == 'FAULT'} ? 'fault' :
+                                                          'unknown')"
+                                          th:text="${m.rfidStatus}">UNKNOWN</span>
+                            </td>
+                            <td>
+                                    <span class="status-badge"
+                                          th:classappend="${m.lcdStatus == 'OK'} ? 'online' :
+                                                          (${m.lcdStatus == 'FAULT'} ? 'fault' :
+                                                          'unknown')"
+                                          th:text="${m.lcdStatus}">UNKNOWN</span>
+                            </td>
+                            <td>
+                                    <span class="status-badge"
+                                          th:classappend="${m.relayStatus == 'OK'} ? 'online' :
+                                                          (${m.relayStatus == 'FAULT'} ? 'fault' :
+                                                          'unknown')"
+                                          th:text="${m.relayStatus}">UNKNOWN</span>
+                            </td>
+                            <td>
+                                    <span class="mono-badge"
+                                          th:if="${m.uptimeSeconds != null}"
+                                          th:text="${m.uptimeSeconds / 3600 + 'h ' +
+                                                    (m.uptimeSeconds % 3600 / 60) + 'm'}">
+                                    </span>
+                                <span th:if="${m.uptimeSeconds == null}"
+                                      style="color:var(--text-muted)">—</span>
+                            </td>
+                            <td>
+                                    <span class="mono-badge"
+                                          th:if="${m.freeHeap != null}"
+                                          th:text="${m.freeHeap / 1024 + ' KB'}">
+                                    </span>
+                                <span th:if="${m.freeHeap == null}"
+                                      style="color:var(--text-muted)">—</span>
+                            </td>
+                            <td>
+                                    <span th:if="${m.lastFaultType != null}"
+                                          class="fault-tag"
+                                          th:text="${m.lastFaultType}">—</span>
+                                <span th:if="${m.lastFaultType == null}"
+                                      style="color:var(--text-muted)">—</span>
+                            </td>
+                            <td>
+                                    <span class="fault-msg"
+                                          th:text="${m.lastFaultMessage != null ?
+                                                    m.lastFaultMessage : '—'}">—</span>
+                            </td>
+                            <td>
+                                    <span class="time-ago"
+                                          th:text="${m.lastFaultTime != null} ?
+                                          ${#temporals.format(m.lastFaultTime,'dd MMM HH:mm')} : '—'">
+                                        —
+                                    </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function updateClock() {
+        const el = document.getElementById('topbarTime');
+        if (el) el.textContent = new Date().toLocaleTimeString('en-IN',
+            {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('mainWrapper').classList.toggle('sidebar-collapsed');
+    }
+
+    async function loadChart() {
+        try {
+            const res  = await fetch('/api/chart-data');
+            const data = await res.json();
+            const colors = ['#00f5a0','#00d9f5','#f59e0b',
+                            '#f43f5e','#818cf8','#34d399'];
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Total Revenue',
+                            data: data.salesData,
+                            backgroundColor: colors.map(c => c + '88'),
+                            borderColor: colors,
+                            borderWidth: 2,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Today Revenue',
+                            data: data.dailyData
+                                ? data.dailyData.map((d, i) => {
+                                    return 0;
+                                  })
+                                : [],
+                            backgroundColor: '#ffffff15',
+                            borderColor: '#ffffff44',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { color: '#94a3b8' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: v => '₹' + v
+                            }
+                        }
+                    }
+                }
+            });
+        } catch(e) {
+            console.log('Chart error:', e);
+        }
+    }
+
+    async function refreshStats() {
+        try {
+            const data = await fetch('/api/stats').then(r => r.json());
+            document.getElementById('statTotalMachines').textContent = data.totalMachines;
+            document.getElementById('statOnline').textContent        = data.onlineMachines;
+            document.getElementById('statOffline').textContent       = data.offlineMachines;
+            document.getElementById('statFault').textContent         = data.faultMachines;
+            document.getElementById('statPlays').textContent         = data.totalPlays;
+            document.getElementById('statDailyPlays').textContent    = data.dailyPlays;
+            document.getElementById('statSales').textContent         = data.totalSales;
+            document.getElementById('statDailySales').textContent    = data.dailySales;
+        } catch(e) {}
+    }
+
+    loadChart();
+    setInterval(refreshStats, 10000);
+    setInterval(() => location.reload(), 60000);
+</script>
+</body>
+</html>

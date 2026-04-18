@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Machines — ArcadeOS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="bi bi-controller"></i></div>
+        <div class="brand-text">
+            <span class="brand-name">ArcadeOS</span>
+            <span class="brand-sub">Machine Control</span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a th:href="@{/}" class="nav-item"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
+        <a th:href="@{/machines}" class="nav-item active"><i class="bi bi-hdd-rack"></i><span>Machines</span></a>
+        <a th:href="@{/analytics}" class="nav-item"><i class="bi bi-bar-chart-line"></i><span>Analytics</span></a>
+        <a th:href="@{/h2-console}" target="_blank" class="nav-item"><i class="bi bi-database"></i><span>Database</span></a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="system-status"><div class="status-dot online"></div><span>System Online</span></div>
+    </div>
+</div>
+
+<div class="main-wrapper" id="mainWrapper">
+    <header class="topbar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <div class="topbar-title">Machines</div>
+        <div class="topbar-actions">
+            <div class="live-badge"><span class="pulse-dot"></span><span>LIVE</span></div>
+            <span class="topbar-time" id="topbarTime"></span>
+        </div>
+    </header>
+
+    <div th:if="${successMessage != null}" class="alert alert-success alert-dismissible fade show mx-4 mt-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMessage != null}" class="alert alert-danger alert-dismissible fade show mx-4 mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="content-inner">
+
+        <div class="page-header">
+            <div>
+                <h2>Machine Management</h2>
+                <p class="page-sub">Add, edit, and monitor your arcade machines</p>
+            </div>
+            <button class="btn-primary-glow" data-bs-toggle="modal" data-bs-target="#addMachineModal">
+                <i class="bi bi-plus-circle me-2"></i>Add Machine
+            </button>
+        </div>
+
+        <div class="machine-cards-grid">
+            <div th:each="m : ${machines}" class="machine-card"
+                 th:classappend="${m.status == 'ONLINE'} ? 'machine-online' : 'machine-offline'">
+
+                <div class="machine-card-header">
+                    <span class="status-badge"
+                          th:classappend="${m.status == 'ONLINE'} ? 'online' : 'offline'"
+                          th:text="${m.status}">OFFLINE</span>
+                    <div class="machine-card-actions">
+                        <a th:href="@{/machines/edit/{id}(id=${m.id})}" class="icon-btn edit" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form th:action="@{/machines/reset/{id}(id=${m.id})}" method="post" style="display:inline">
+                            <button type="submit" class="icon-btn reset" title="Reset Count"
+                                    onclick="return confirm('Reset play count?')">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        </form>
+                        <form th:action="@{/machines/delete/{id}(id=${m.id})}" method="post" style="display:inline">
+                            <button type="submit" class="icon-btn danger" title="Delete"
+                                    onclick="return confirm('Delete this machine?')">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="machine-card-body">
+                    <div class="machine-card-avatar" th:text="${m.name.substring(0,1)}">M</div>
+                    <h4 th:text="${m.name}">Machine Name</h4>
+                    <div class="machine-id-tag" th:text="${m.machineId}">ID</div>
+                    <div class="machine-location" th:if="${m.location != null}">
+                        <i class="bi bi-geo-alt"></i> <span th:text="${m.location}"></span>
+                    </div>
+                </div>
+
+                <div class="machine-card-stats">
+                    <div class="mstat">
+                        <div class="mstat-val" th:text="${m.playCount}">0</div>
+                        <div class="mstat-label">Plays</div>
+                    </div>
+                    <div class="mstat-divider"></div>
+                    <div class="mstat">
+                        <div class="mstat-val" th:text="'&#8377;' + ${m.pricePerPlay}">0</div>
+                        <div class="mstat-label">Per Play</div>
+                    </div>
+                    <div class="mstat-divider"></div>
+                    <div class="mstat highlight">
+                        <div class="mstat-val" th:text="'&#8377;' + ${#numbers.formatDecimal(m.totalSales,1,2)}">0.00</div>
+                        <div class="mstat-label">Revenue</div>
+                    </div>
+                </div>
+
+                <div class="machine-card-footer">
+                    <i class="bi bi-clock"></i>
+                    Last seen:
+                    <span th:text="${m.lastSeen != null ? #temporals.format(m.lastSeen,'dd MMM HH:mm:ss') : 'Never'}">Never</span>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(machines)}" class="empty-machines-state">
+                <i class="bi bi-hdd-rack"></i>
+                <h4>No machines yet</h4>
+                <p>Click "Add Machine" to register your first arcade machine.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Machine Modal -->
+<div class="modal fade" id="addMachineModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content dark-modal">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add New Machine</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/machines/add}" method="post" th:object="${newMachine}">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Machine Name *</label>
+                            <input type="text" th:field="*{name}" class="form-control dark-input" placeholder="e.g. Street Fighter II" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Machine ID * <small>(must match ESP32)</small></label>
+                            <input type="text" th:field="*{machineId}" class="form-control dark-input" placeholder="e.g. MACHINE_001" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Price Per Play (&#8377;) *</label>
+                            <input type="number" th:field="*{pricePerPlay}" class="form-control dark-input" placeholder="10.00" step="0.50" min="0.50" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" th:field="*{location}" class="form-control dark-input" placeholder="e.g. Zone A">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea th:field="*{notes}" class="form-control dark-input" rows="2" placeholder="Optional notes..."></textarea>
+                    </div>
+                    <div class="api-hint">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>ESP32 API endpoint:</strong><br>
+                        <code>GET http://YOUR_SERVER_IP:8080/api/play?machineId=MACHINE_001&amp;count=1</code>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-glow"><i class="bi bi-check-circle me-2"></i>Add Machine</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function updateClock() {
+        const el = document.getElementById('topbarTime');
+        if (el) el.textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }
+    setInterval(updateClock, 1000); updateClock();
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('mainWrapper').classList.toggle('sidebar-collapsed');
+    }
+    setTimeout(() => {
+        document.querySelectorAll('.alert').forEach(a => bootstrap.Alert.getOrCreateInstance(a).close());
+    }, 5000);
+</script>
+</body>
+</html>
